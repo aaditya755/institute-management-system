@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  const session = req.auth;
-  const userRole = session?.user?.role;
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+  const userRole = token?.role as string | undefined;
 
-  if (!session?.user && pathname !== "/login") {
+  if (!token && pathname !== "/login") {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
@@ -29,7 +32,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/admin/:path*", "/faculty/:path*", "/student/:path*", "/login"],
