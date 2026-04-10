@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FACULTY
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum FeeStatus {
+  PAID
+  UNPAID
+  PARTIAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  student   Student?
+  faculty   Faculty?
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNo      String       @unique
+  batchId     String
+  batch       Batch        @relation(fields: [batchId], references: [id])
+  phone       String
+  parentPhone String
+  address     String
+  enrolledAt  DateTime     @default(now())
+  attendance  Attendance[]
+  fees        Fee[]
+  results     Result[]
+}
+
+model Faculty {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjects      String[]
+  qualification String
+  salary        Float
+  joinedAt      DateTime    @default(now())
+  batches       Batch[]
+  timetables    Timetable[]
+  exams         Exam[]
+}
+
+model Batch {
+  id         String       @id @default(cuid())
+  name       String
+  subject    String
+  facultyId  String
+  faculty    Faculty      @relation(fields: [facultyId], references: [id])
+  startTime  String
+  endTime    String
+  days       String[]
+  students   Student[]
+  attendance Attendance[]
+  timetables Timetable[]
+  exams      Exam[]
+  createdAt  DateTime     @default(now())
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  studentId String
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId   String
+  batch     Batch            @relation(fields: [batchId], references: [id])
+  date      DateTime
+  status    AttendanceStatus
+  createdAt DateTime         @default(now())
+
+  @@unique([studentId, batchId, date])
+}
+
+model Fee {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount        Float
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        FeeStatus @default(UNPAID)
+  installmentNo Int
+  description   String?
+  createdAt     DateTime  @default(now())
+}
+
+model Timetable {
+  id        String  @id @default(cuid())
+  batchId   String
+  batch     Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  facultyId String
+  faculty   Faculty @relation(fields: [facultyId], references: [id])
+  day       String
+  startTime String
+  endTime   String
+  subject   String
+}
+
+model Exam {
+  id         String   @id @default(cuid())
+  name       String
+  batchId    String
+  batch      Batch    @relation(fields: [batchId], references: [id])
+  facultyId  String
+  faculty    Faculty  @relation(fields: [facultyId], references: [id])
+  subject    String
+  date       DateTime
+  totalMarks Int
+  results    Result[]
+  createdAt  DateTime @default(now())
+}
+
+model Result {
+  id            String  @id @default(cuid())
+  examId        String
+  exam          Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  marksObtained Float
+  grade         String
+  remarks       String?
+
+  @@unique([examId, studentId])
+}
